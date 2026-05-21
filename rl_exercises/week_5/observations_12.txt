@@ -1,0 +1,14 @@
+- How does the length of the trajectories affect the training?
+Short trajectories lead to more stable updates, as the calculated returns have a lower variance.
+Although they contain less information about the long term consequences.
+Long trajectories contain more information about the long term consequences, but produce more noisy gradients.
+Errors and randomness will accumulate and lead to a more instability, so the performance will vary between runs.
+
+- Does the same network architecture and learning rate work for LunarLander-v2?
+I don't think that will work very well.
+LunarLander is more complex than CartPole, additionally LunarLander is more sensitive to mistakes
+
+- How is the sample complexity (how many steps it takes to solve the environment) of this algorithm related to the DQN from the last exercise?
+DQN is more efficient, because past experiences and td-learning will be used.
+However REINFORCE only uses complete trajectories once and suffers from high variance.
+So REINFORCE will need more samples to learn a good policy.
