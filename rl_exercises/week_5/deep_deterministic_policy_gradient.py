@@ -40,7 +40,7 @@ def moving_average(values, window=10):
     return np.convolve(values, weights, mode="valid")
 
 #   -----------------
-#       GP
+#       REINFORCE
 #   -----------------
 
 class Policy(nn.Module):
@@ -393,6 +393,10 @@ class REINFORCEAgent(AbstractAgent):
 #   -----------------
 #       DDGP
 #   -----------------
+# AI Disclaimer
+# The AI was used to adapt the code to the formatting, structure,
+# and style of the provided example code
+
 
 from collections import deque
 import random
@@ -428,7 +432,7 @@ class ReplayBuffer:
         rewards = torch.from_numpy(np.array(rewards, dtype=np.float32)).unsqueeze(1)
         next_states = torch.from_numpy(np.array(next_states, dtype=np.float32))
         dones = torch.from_numpy(np.array(dones, dtype=np.float32)).unsqueeze(1)
-
+        # m
         return states, actions, rewards, next_states, dones
 
     def __len__(self):
@@ -483,13 +487,8 @@ class Critic(nn.Module):
         self.state_dim = int(np.prod(state_space.shape))
         self.action_dim = int(np.prod(action_space.shape))
 
-        self.fc1 = nn.Linear(
-            self.state_dim + self.action_dim,
-            hidden_size
-        )
-
+        self.fc1 = nn.Linear(self.state_dim + self.action_dim, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-
         self.fc3 = nn.Linear(hidden_size, 1)
 
     def forward(
@@ -537,7 +536,7 @@ class DDPGAgent(AbstractAgent):
         self.batch_size = batch_size
         self.noise_std = noise_std
 
-        # Actor
+        # actor
         self.actor = Actor(
             env.observation_space,
             env.action_space,
@@ -550,7 +549,7 @@ class DDPGAgent(AbstractAgent):
             hidden_size,
         )
 
-        # Critic
+        # critic
         self.critic = Critic(
             env.observation_space,
             env.action_space,
@@ -585,7 +584,6 @@ class DDPGAgent(AbstractAgent):
 
         # replay buffer
         self.replay_buffer = ReplayBuffer(buffer_size)
-
         self.total_episodes = 0
 
         # plotting
@@ -598,29 +596,15 @@ class DDPGAgent(AbstractAgent):
             info: Dict[str, Any] = {},
             evaluate: bool = False,
     ):
-        state_t = torch.tensor(
-            state,
-            dtype=torch.float32
-        )
-
+        state_t = torch.tensor(state, dtype=torch.float32)
         action = self.actor(state_t).detach().numpy()[0]
 
         if not evaluate:
-            noise = np.random.normal(
-                0,
-                self.noise_std,
-                size=action.shape,
-            )
-
+            noise = np.random.normal(0, self.noise_std, size=action.shape)
             action = action + noise
 
         max_action = self.env.action_space.high[0]
-
-        action = np.clip(
-            action,
-            -max_action,
-            max_action,
-        )
+        action = np.clip( action, -max_action, max_action)
 
         return action, {}
 
@@ -629,33 +613,17 @@ class DDPGAgent(AbstractAgent):
         if len(self.replay_buffer) < self.batch_size:
             return 0.0, 0.0
 
-        (
-            states,
-            actions,
-            rewards,
-            next_states,
-            dones,
+        ( states, actions, rewards, next_states, dones,
         ) = self.replay_buffer.sample(self.batch_size)
 
-        # -----------------------------------------
-        # Critic Target
-        # -----------------------------------------
-
+        # Critic target
         with torch.no_grad():
 
             next_actions = self.target_actor(next_states)
-
-            target_q = self.target_critic(
-                next_states,
-                next_actions,
-            )
-
+            target_q = self.target_critic(next_states, next_actions)
             y = rewards + self.gamma * (1 - dones) * target_q
 
-        # -----------------------------------------
-        # Critic Update
-        # -----------------------------------------
-
+        # Critic update
         current_q = self.critic(
             states,
             actions,
@@ -667,30 +635,20 @@ class DDPGAgent(AbstractAgent):
         )
 
         self.critic_optimizer.zero_grad()
-
         critic_loss.backward()
-
         self.critic_optimizer.step()
 
-        # -----------------------------------------
-        # Actor Update
-        # -----------------------------------------
-
+        # actor update
         actor_loss = -self.critic(
             states,
             self.actor(states),
         ).mean()
 
         self.actor_optimizer.zero_grad()
-
         actor_loss.backward()
-
         self.actor_optimizer.step()
 
-        # -----------------------------------------
-        # Soft Target Updates
-        # -----------------------------------------
-
+        # Softttarget update
         for param, target_param in zip(
                 self.actor.parameters(),
                 self.target_actor.parameters(),
@@ -737,11 +695,8 @@ class DDPGAgent(AbstractAgent):
                 )
 
                 next_state, reward, term, trunc, _ = eval_env.step(action)
-
                 done = term or trunc
-
                 total_return += reward
-
                 state = next_state
 
             returns.append(total_return)
@@ -763,33 +718,21 @@ class DDPGAgent(AbstractAgent):
         for ep in range(1, num_episodes + 1):
 
             state, _ = self.env.reset()
-
             done = False
-
             episode_return = 0.0
 
             while not done:
                 action, _ = self.predict_action(state)
-
                 next_state, reward, term, trunc, _ = self.env.step(action)
-
                 done = term or trunc
 
-                self.replay_buffer.push(
-                    state,
-                    action,
-                    reward,
-                    next_state,
-                    done,
-                )
-
+                self.replay_buffer.push(state, action, reward, next_state, done)
                 actor_loss, critic_loss = self.update_agent()
-
                 episode_return += reward
-                self.train_returns.append(episode_return)
 
                 state = next_state
 
+            self.train_returns.append(episode_return)
             self.total_episodes += 1
 
             if ep % 10 == 0:
@@ -836,9 +779,16 @@ def main(cfg: DictConfig) -> None:
             eval_interval: int
             eval_episodes: int
     """
+    #   -----------------
+    #       REINFORCE
+    #   -----------------
+
     # Initialize environment and seed
     print(f"config: {cfg}")
     reinforce_env = gym.make(cfg.env.name)
+    # REINFORCE needs discrete environment conflict with DDPG, needs continuously environment
+    # Easy solution different environments
+    # TODO better solution?
     set_seed(reinforce_env, cfg.seed)
 
     # Instantiate agent with hyperparameters from config
@@ -861,9 +811,11 @@ def main(cfg: DictConfig) -> None:
     #       DDGP
     #   -----------------
 
+    # Initialize environment and seed
     ddpg_env = gym.make("Pendulum-v1")
     set_seed(ddpg_env, cfg.seed)
 
+    # Instantiate agent with hyperparameters
     ddpg_agent = DDPGAgent(
         env=ddpg_env,
         actor_lr=1e-4,
@@ -876,6 +828,7 @@ def main(cfg: DictConfig) -> None:
         hidden_size=256,
     )
 
+    # Train agent
     ddpg_agent.train(
         num_episodes=cfg.train.episodes,
         eval_interval=cfg.train.eval_interval,
@@ -885,27 +838,11 @@ def main(cfg: DictConfig) -> None:
     # Plotting
     plt.figure(figsize=(12, 6))
 
-    # REINFORCE
-    reinforce_smoothed = moving_average(
-        reinforce_agent.train_returns,
-        window=10,
-    )
+    reinforce_smoothed = moving_average(reinforce_agent.train_returns, window=10, )
+    ddpg_smoothed = moving_average(ddpg_agent.train_returns, window=10, )
 
-    # DDPG
-    ddpg_smoothed = moving_average(
-        ddpg_agent.train_returns,
-        window=10,
-    )
-
-    plt.plot(
-        reinforce_smoothed,
-        label="REINFORCE",
-    )
-
-    plt.plot(
-        ddpg_smoothed,
-        label="DDPG",
-    )
+    plt.plot(reinforce_smoothed, label="REINFORCE", )
+    plt.plot(ddpg_smoothed, label="DDPG", )
 
     plt.xlabel("Episode")
     plt.ylabel("Return")
