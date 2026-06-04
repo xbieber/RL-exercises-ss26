@@ -1,0 +1,14 @@
+General observations
+
+The Deep Deterministic Policy Gradient algorithm was implemented and
+compared against the REINFORCE policy gradient method.
+One problem which will influence the comparability is that they are running
+on different environments, REINFORCE on a discrete one (CartPole)
+ and DDGP on a continuously one (Pendulum).
+
+The goal of DDPG is to stabilize learning, which in my opinion can be seen in the plot.
+The orange DDPG curve learns smoothly and consistently and is then more stable with smaller
+oscillation. The blue REINFORCE curve learns quickly but has a high oscillation.
+
+I think the first part is not totally comparable because of the different environments CartPole vs Pendulum,
+but the second part of the plot with the strong vs small oscillation, is quite meaningful.
